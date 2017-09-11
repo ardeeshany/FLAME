@@ -1,0 +1,18 @@
+Package: flm
+Type: Package
+Title: FLAME for high-dimensional Function-on-Scalar regression
+        problems
+Version: 0.1
+Date: 2016-10-24
+Author: Alice Parodi and Matthew Reimherr
+Maintainer: Alice Parodi <alicecarla.parodi@polimi.it>
+Description: Functional Linear Adaptive Mixed Estimation for high dimensional Function-on-Scalar regression
+License: GPL-3
+Imports: Rcpp, RcppArmadillo, nloptr, kernlab, fda
+Suggests: MASS, knitr, rmarkdown
+LinkingTo: Rcpp, RcppArmadillo
+LazyData: TRUE
+RoxygenNote: 5.0.1
+VignetteBuilder: knitr
+NeedsCompilation: yes
+Packaged: 2016-10-24 08:49:08 UTC; Alice
