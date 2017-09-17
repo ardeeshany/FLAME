@@ -10,7 +10,14 @@
 // // [[Rcpp::export]]
 class linear_model {
 
+    // ## @A: A class (user_defined types) is used to specify the form of an object and it combines
+    // data representation and methods for manipulating that data into one neat package.
+
 private:
+
+    // ## @A: arma (Armadillo) is a high quality linear algebra library (matrix maths) for the C++
+    // arma::mat the main matrix object in arma is mat
+    // arma:vec  define a vector
     arma::mat Y, X, B, E, B_ls;
     unsigned int num_pred;
     unsigned int num_data;
@@ -19,16 +26,63 @@ private:
 
 public:
 
+/*###########################################################################################
+#
+# @A Part1: Defining some norm_K and norm_H functions for B_i and Y_n
+#
+###########################################################################################*/
+
     // c++ function which calls the R function to perform the optimization and
     // compute the norm of beta_j
+
+
+    // Brief introsuction on Rcpp Package:
+    // ##@A: Rcpp package: provides matching C++ classes for a large number of basic R data types.
+    // The mapping of data types works in both directions. Transfer from R to C++, and from C++ to R
+    // through the templated functions Rcpp::as (for conversion of objects from R to C++) and Rcpp::wrap (for conversion from C++ to R)
+    // Hence, a package author can keep his data in normal R data structures without having to worry
+    // about translation or transfering to C++. At the same time, the data structures can be accessed as easily at the C++ level, and used in the normal manner.
+    // R data types (SEXP : S-expression pointer) are matched to C++ objects in a class hierarchy.
+    //  For example, numeric vectors are represented as instances of the Rcpp::NumericVector class,
+    // environments are represented as instances of Rcpp::Environment,
+    // functions are represented as Rcpp::Function, etc ...
+    // Rcpp::wrap   The underlying C++ library also offers the Rcpp::wrap function which is a templated function
+    // that transforms an arbitrary object into a SEXP (R type). We should  wrap them when they need to be returned to R.
+    // Rcpp::as    The reverse conversion (from R into C++) is performed by the Rcpp::as
+    // // conversion from R to C++:
+    // template <typename T> T as( SEXP x) ;
+    // conversion from C++ to R:
+    // template <typename T> SEXP wrap(const T& object) ;
+
+
+  // ## @A: omega is the weights in FLAME function.
+  // lambda is the penalty paramter in the FLAME function
+  // ## @A: computation_norm_cpp is used to find the \norm{\beta_j}_K numerically from the equation.
+  // and don't remember the f function is gonna be come from R.
     double computation_norm_cpp( double &lambda, double &omega, arma::vec &B_j,
                                  arma::vec &tau,  Rcpp::Function f)
     {
-        return( Rcpp::as<double>(f(lambda, omega, B_j, tau)) );
+        return(Rcpp::as<double>(f(lambda, omega, B_j, tau)));
     }
+
+
+    // ##@A: K is a kernel with k eigenvalues (tau) and k eigenfunc (V). So we have tau=[tau_1,...,tau_k] and V=[v_1,...,v_k]
+    // B' is coefficient of the model which are func so we can fix the V and write B-c_1v_1+...+c_kv_k
+    // So B in this code is a k vector including its basis coefficients B=[c_1,...,c_k]
+    // and if there are p predictors, there will be p coefficient B'1,...B'p
+    // So B_here is a k*p matrix. Each column including their basis coefficients.
+    // X_here is a p*N matrix
+    // Y_here is a k*N. Each column is the basis coefficients of Y_n. Because when Y_n=X_1B'1+...X_pB'p, \alpha_ni=<Y_n,v_i>=X_1c_1i+...X_pc_pi which is come from B*t(X)
+    // p is the I in the orignial model (p=I)
 
     // norm in K of K(x), given the components in the kernel basis (B) and the
     // eigenvalues of the kernel (tau)
+
+ // ### ?@A: what is this? normK(B)? shouldn't be like return(sqrt(sum(B % B / tau)));
+
+   // ## norm_K_Kx computes \norm{K(B)}_K ; B is a coefficient in model
+   // \norm{k(B)}^2_K = \sum_{i=1}^{k} \dfrac{<K(B),v_i>^2}{\tau_i}=\sum_{i=1}^{k} \dfrac{<B,K(v_i)>^2}{\tau_i}=\sum_{i=1}^{k} tau_i c_i^2
+   // when we compute norm_K we should have both eigenval and eigenfunc but in here tau is enough. Becauase the effects of eigenfunc of kernel is in the coefficient in matricex B_here and Y_here.
     double norm_K_Kx(arma::vec &B, arma::vec &tau)
     {
         return(sqrt(sum(B % B % tau)));
@@ -37,6 +91,8 @@ public:
     // K norm of the matrix B_here (square-root of the sum of the squares of the
     // K norms of the columns of B_here). tau is the vector of the eigenvalues of
     // the kernel
+
+   // ## norm_K_matrix computes \sqrt{ \norm{B_1}^2_K + ... + \norm{B_p}^2_K } ; B_i is a coefficient in model
     double norm_K_matrix(arma::mat &B_here, arma::vec tau)
     {
         double norm_matrix=0;
@@ -49,6 +105,9 @@ public:
 
     // square of the H norm of the matrix Y_here (sum of the squares of the
     // H norms of the columns of Y_here)
+
+   // ## square_norm_H_matrix computes { \norm{Y_1}^2_H + ... + \norm{Y_N}^2_H }
+   // \norm{Y_1}^2_H= \alpha_11^2+...+\alpha_1k^2 (elements in first column of Y_here).
     double square_norm_H_matrix(arma::mat &Y_here)
     {
         double norm_matrix=0;
@@ -62,6 +121,9 @@ public:
     // square of the K norm of the matrix Y_here (sum of the squares of the
     // K norms of the columns of Y_here). tau is the vector of the eigenvalues of
     // the kernel
+
+    // ## square_norm_K_matrix { \norm{Y_1}^2_K + ... + \norm{Y_N}^2_K } ;
+    // \norm{Y_1}^2_K = \sum_{i=1}^{k} \dfrac{\alpha_1i^2}{\tau_i}
     double square_norm_K_matrix(arma::mat &Y_here, arma::vec &tau)
     {
         double norm_matrix=0;
@@ -71,6 +133,12 @@ public:
         }
         return (norm_matrix);
     }
+
+/*###########################################################################################
+#
+# @A Part2: Defining BIC
+#
+###########################################################################################*/
 
     // computation of the BIC given as input
     // - Y_here: kxN matrix; the matrix of the true values of the observations in the kernel basis
@@ -85,6 +153,8 @@ public:
         arma::mat difference = Y_here - B_here*X_here.t();
         // we can compute the RSS both with the H and K norm.
         // double error_H = square_norm_H_matrix(difference); //H norm
+
+ // ## ?@A: shouldn't it be error_K?
         double error_H = square_norm_K_matrix(difference, tau); //K norm
         //std::cout<<error_H<<N<<p<<std::endl;
         double BIC_computed =  N*log(error_H/N) + log(N)*p;
@@ -92,8 +162,18 @@ public:
 
     }
 
-    // constructor of the linear_model element given the matrix of the predictors
+/*###########################################################################################
+#
+# @A Part3: Initializing the private value of the linear_model class.
+#
+###########################################################################################*/
+
+     // constructor of the linear_model element given the matrix of the predictors
     // X_data (Nxp) and the matrix of the observations Y_data (kxN)
+
+    // ?@A: are these two following linear_models for initialization private values? when do we usually use it?
+    // @A: B_ls is actually the B^{v} in FLAME.
+    //         what does B.zeros(B_ls.n_rows, B_ls.n_cols); means?
     linear_model(const arma::mat &X_data, const arma::mat &Y_data){
         Y=Y_data;
         X=X_data;
@@ -119,25 +199,40 @@ public:
         num_zeros_pred=0;
     }
 
+    // ## @A: "cout" means "standard output stream" and "<<" meanning "write to"
+    //        Rcpp:Rcout works in R as cout in C++
+
+
     // output function to print the number of the predictors and the predictor matrix
     void predictors()
     {
         Rcpp::Rcout<<"matrix of predictors" <<X <<"number of predictors "<< num_pred;
     }
-    
+
     //make the betas 0
+
+    // ## @A: .zers() : set all elements to zero
     void set_B_zeros()
     {
         B.zeros();
     }
 
-    // definition of the vector of all the possible values of lambda,
+/*###########################################################################################
+#
+# @A Part4: definition for choosing lambda vector
+#
+###########################################################################################*/
+
+   // definition of the vector of all the possible values of lambda,
     // given the number of lambdas (num_lambda) and the ratio between the maximum
     // and the minimum (ratio_lambda).
     // in particular the vector is defined from lambda_max
     // (computes as the minimum value for which all the predictors are
     // guaranteed to be 0) to lambda_min = lambda_max*raito_lambda
     // not equispaced vector
+
+    // ## @A: equispace in log
+    // omega is the vector of weights in FLAME function
     arma::vec definition_lambda(double ratio_lambda, int num_lambda, arma::vec omega, arma::vec tau)
     {
 
@@ -147,6 +242,7 @@ public:
         {
             arma::vec B_temp=B_ls.col(j);
             lambda_max_vec(j) = norm_K_Kx(B_temp, tau)/omega(j);
+        // ## ?@A: what is the difference between Rcpp::Rcout and std::cout?
             //std::cout<<"j="<<j<<" lambda "<<lambda_max_vec(j)<<std::endl;
         }
         lambda_max = 2*max(lambda_max_vec); //CAMPPPPP
@@ -178,8 +274,17 @@ public:
         return lambda;
     }
 
+/*###########################################################################################
+#
+# @A Part5: Main Function, estimate, for definition_beta
+#
+###########################################################################################*/
+
     // MAIN FUNCTION TO COMPUTE THE ESTIMATION,
     // called from define_beta
+
+   // ## @A: we dont have B and X here. How do they gonna inserted?
+   // They are as private variables. They can be accessable when we are in the class.
     Rcpp::List estimate( arma::vec &tau, arma::vec &omega_vect,
                          const int &N_iter, Rcpp::Function computation_norm, double &thres,
                          unsigned int &non_zeros_pred, arma::vec &lambda,
@@ -187,6 +292,11 @@ public:
                          bool verbose)
     {
 
+/*###########################################################################################
+#
+# @A Part5-1: Introducing some new variables
+#
+###########################################################################################*/
 
       //  B.zeros();
         arma::mat B_subset(B.n_rows, B.n_cols-1);
@@ -199,11 +309,15 @@ public:
         arma::mat B_old(B.n_rows, B.n_cols);
 
         double lambda_iter;
+
+        // ?@A: if num_pred=X.n_col()=p or it is p_0 the true number of non zero predictors in true model? We don't know  p_0
         arma::vec vector_non_zeros_pred(num_pred);
         double num_zeros_pred;
+        // ## @A: n_elem gives number of elements in vector lambda
         int number_lambda_computed=lambda.n_elem;
 
 
+        // @A: for each lambda, we have different BIC. We put all of them in BIC_computed vector.
         arma::vec BIC_computed(lambda.n_elem); //to store the BIC of each iteration
 
         arma::mat Beta_def_BIC;
@@ -212,7 +326,14 @@ public:
         double lambda_BIC;
         double BIC_value=1000000; //initialization of the best BIC value
 
+/*###########################################################################################
+#
+# @A Part5-2: Estimating Beta (Beta loop) (or N-iter loop)
+#
+###########################################################################################*/
 
+    // @A: in this loop we don't care what the best lambda is. We just use diffenet lambdas from the vecotr lambda
+    // we can find the best lambda based on BIC criteria.
         for (unsigned int l=0; l<lambda.n_elem; l++) //loop on lambda
         {
             lambda_iter=lambda(l);
@@ -228,12 +349,14 @@ public:
                   //         E_glob=E;
                  // }else{
                      E_glob=Y-B*X.t(); //initialization with the previous estimation
-                    
+
                  // }
-                   
+
                 B_old=B;
 
                 num_zeros_pred=0;
+
+        // ?@A: what is the difference of  B.zeros() and B.zeros(p,1)?
                 vector_non_zeros_pred.zeros(num_pred,1);
 
                 for (unsigned int j=0; j<num_pred; j++)
@@ -249,6 +372,7 @@ public:
                 //    {
                         E= E_glob + B_j * X_j.t();
 
+            // @A: B_tilde is the B^{v} in FLAME.
                         B_tilde = E * X_j / num_data;
                   //  }else
                 //    {
@@ -263,12 +387,23 @@ public:
 
                     }else
                     {
+
+                // @A: finally "vector_non_zeros_pred" gives a p*1 matrix which the first part of
+                // them are nonzero (each element is the label of the predictor)
+                // and rest of them are zero.
                         vector_non_zeros_pred(j-num_zeros_pred)=j;
 
                         double norm_B_j;
 
+            // @A: computation_norm_cpp is used to calculate numerically the value of \norm{\beta_j}_K from the equation in FALME
                         norm_B_j = computation_norm_cpp(lambda_iter, omega, B_tilde,
                                                         tau, computation_norm); // numerical optimization to compute the norm
+
+            // @A: This part shows why we put the coefficients of B and Y in the matrices.
+            // Because K(B_j)=tau%B_j   (A%B=a_1*b_1+...+a_p*b_p)
+            // The following come from the formula in FLAME by
+            // B_j=(K*\norm{B_j}_K+\lambda*\omega)^{-1} \norm{B_j}_K K (B_tilde)
+            // which K(B_tilde)=\tau*B_tilde and if (K1+K2)(B)=cB then  (K1+K2)^{-1}(B)=B/c
                         B_j = tau % B_tilde * norm_B_j / (tau * norm_B_j + lambda_iter*omega );
 
                     }
@@ -276,16 +411,24 @@ public:
                 } //end of the predictors loop
 
                 arma::mat error_beta_matrix = B_old-B;
-                // check on the improuvment of the estimation
+                // check on the improvment of the estimation
                 if (norm_K_matrix(error_beta_matrix, tau) < thres)
                 {
                     // std::cout<<std::endl<<"Not significant change of Beta => Stop iteration at iter = "<<k+1<<std::endl;
+                //@A: This loop is going to be run for N_iter times (N_iter is one of the stopping criteri).
+                // But we have a stronger stopping criteria, a threshold on increment of estimated beta.
+                // when it happens, we break the loop
                     k=N_iter;
                 }
 
 
             } //end of the N_iter loop
 
+/*###########################################################################################
+#
+# @A Part5-4: Return values ( and Finding the best lambda and estimate by BIC (it has not been activated in this code))
+#
+###########################################################################################*/
 
             vector_non_zeros_pred.resize(num_pred-num_zeros_pred);
 
@@ -294,14 +437,18 @@ public:
                 Rcpp::Rcout<<std::endl<<"number of non zero predictors fitted with lambda "<<lambda_iter<<
                     " is " <<num_pred-num_zeros_pred<<std::endl;
             }
-            
+
+// @A: BIC code. It has not beern activated.
+            // ?@A: Are you sure this part works?
+            // Because there are two if(l!=0) parts and they have some overlaps
+
             /*
             if (BIC==1) // if we need to compute the BIC to identify the best value of lambda
             {
                 unsigned int p=num_pred-num_zeros_pred;
                 //  std::cout<<"number predictors"<<p<<" number data"<<num_data<<std::endl;
                 BIC_computed(l) = computation_BIC(Y,X,B,p,num_data, tau);
-                //    std::cout<<"BIC "<< BIC_computed(l)<<std::endl;
+                // std::cout<<"BIC"<<BIC_computed(l)<<std::endl;
                 // std::cout<<"BIC"<<BIC_computed(l)<<std::endl;
                 if (l==0)
                 {
@@ -329,7 +476,7 @@ public:
                 }
                 }
                 }
-                } 
+                }
 
                 if(l!=0)
                 {
@@ -346,14 +493,20 @@ public:
 
 
             } */
-        
+
          //    std::cout<<"number of zeros predictor with lambda "<<lambda_iter<<" is "<< num_zeros_pred<< std::endl;
 
             if( num_pred-num_zeros_pred >= non_zeros_pred )
             {
                 // std::cout << "Number of non zeros predictors reached!";
+
+             // @A: the +1 here is because R codifies c++ + 1.
+             // A vector in R start from 1 bit in c++ start with 0
                 number_lambda_computed=l+1;
                 // std::cout<<"number lamba analyzed "<<number_lambda_computed<<std::endl;
+
+            // @A: Another stopping criteria is a maximum for number of nonzero predictors, which is non_zeros_pred
+            // if we reach to that number, we break the loop by following statement.
                 l = lambda.n_elem ;
             }
 
@@ -361,6 +514,9 @@ public:
 
         //   std::cout<<"last value of lambda "<< lambda_iter<<" which identifies "<< num_zeros_pred<< " zeros predictors "<<std::endl;
 
+
+        // @A: lambda_subset is a vector including the lambda was run in code
+        //     (before breaking the loop by stopping criteria "non_zeros_pred")
         arma::vec lambda_subset=lambda.rows(0,number_lambda_computed-1);
 
         if (BIC==1)
@@ -386,6 +542,8 @@ public:
             );
         }else
         {
+
+       // @A: Actually the above loops will be break in a lambda and estimation. We return them as final results.
             return(Rcpp::List::create(
                     Rcpp::_["Beta"] = B,
                     Rcpp::_["Pred"] = vector_non_zeros_pred + 1, // R codifies c++ + 1
@@ -398,6 +556,11 @@ public:
 
     };
 
+/*###########################################################################################
+#
+# @A Part6: Cross Validation estimation
+#
+###########################################################################################*/
 
     Rcpp::List estimate_CV(const arma::mat X_test, const arma::mat Y_test, arma::vec &tau, arma::vec &omega_vect,
                            const int &N_iter, Rcpp::Function computation_norm, double &thres,
@@ -410,7 +573,7 @@ public:
         arma::mat X_subset(X.n_rows, X.n_cols-1);
 
         arma::mat Beta_best;
-        
+
         unsigned int updated_beta=0;
 
         arma::vec X_j(num_data);
@@ -424,9 +587,10 @@ public:
         double num_zeros_pred;
         int number_lambda_computed=lambda.n_elem;
 
+        // @A: It is gonna be a vector including \norm{Y_estimated_for_test_data-Y_test}_K for each lambda.
         arma::vec error_lambda(number_lambda_computed);
-        
-        
+
+
         double error_def = 100000000;
 
         for (unsigned int l=0; l<lambda.n_elem; l++)
@@ -486,6 +650,8 @@ public:
                 if (norm_K_matrix(error_beta_matrix, tau) < thres)
                 {
                     //    std::cout<<std::endl<<"Not significant change of Beta => Stop iteration at iter = "<<k+1<<std::endl;
+
+            // ?@A: It means we have one more time to run the loop. But why?
                     k=N_iter-1;
                 }
 
@@ -496,13 +662,13 @@ public:
                 Rcpp::Rcout<<std::endl<<"number of non zero predictors fitted with lambda "<<lambda_iter<<
                     " is " <<num_pred-num_zeros_pred<<std::endl;
             }
-            
+
             arma::mat Y_pred_subset = B * X_test.t();
             arma::mat difference = Y_pred_subset-Y_test;
             error_lambda(l) = norm_K_matrix(difference, tau);
             //error_lambda(l) = square_norm_H_matrix(difference);
             if(verbose) {Rcpp::Rcout<<"error K norm "<< error_lambda(l) <<std::endl;}
-            
+
 
            if (l!=0)
             {
@@ -520,6 +686,8 @@ public:
 
         } //end of the lambda loop
 
+
+        // ?@A: how we can imsert the updated_beta during the code is been running?
         unsigned int reached_last;
         if (updated_beta==1) // if it is 1, you have stopped the update of Beta before since you have reached a min
         {
@@ -543,6 +711,16 @@ public:
 // function to compute the estimation of Beta.
 // called from R and explained in the file FLAME.R
 
+//## @A:There are just two output main functions: Defining definition_beta(.) and Defining definition_beta_CV(.)
+
+/*#####################
+#
+# @A Part: Defining definition_beta(.) function
+#
+#####################*/
+
+// @A: Don't remember the f function in compputation_norm is gonna be come from R
+
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::export]]
 Rcpp::List definition_beta(const arma::mat X, const arma::mat Y, arma::mat Beta, arma::vec tau,
@@ -552,7 +730,7 @@ Rcpp::List definition_beta(const arma::mat X, const arma::mat Y, arma::mat Beta,
                            double ratio_lambda, int num_lambda, unsigned int BIC, bool verbose)
 {
     linear_model LM(X,Y);
-    
+
     if (Beta.n_cols!=0)
     {
         Rcpp::Rcout<<"Beta read from input"<<std::endl;
@@ -562,6 +740,8 @@ Rcpp::List definition_beta(const arma::mat X, const arma::mat Y, arma::mat Beta,
 
     arma::vec lambda_estimation;
 
+    // @A: This part is for checking if we manually insert the lambda vector.
+    // If not, It automatically generate the log equspace lambda with using the "definition_lambda" function.
     if (lambda_start.is_empty())
     {
         lambda_estimation=LM.definition_lambda(ratio_lambda, num_lambda, omega_vect, tau);
@@ -578,6 +758,7 @@ Rcpp::List definition_beta(const arma::mat X, const arma::mat Y, arma::mat Beta,
     }
 */
 
+    // @A: Define estimation is a Rcpp::list
     Rcpp::List estimation;
     // call the main function of the class linear_model
     estimation = LM.estimate(tau,  omega_vect, N_iter, computation_norm, thres, non_zeros_pred, lambda_estimation, BIC, verbose);
@@ -590,6 +771,12 @@ Rcpp::List definition_beta(const arma::mat X, const arma::mat Y, arma::mat Beta,
 // N.B. the value of lambda_start MUST be a vector: the vector of all the
 // values of lambda!!! Not empty!
 
+/*#####################
+#
+# @A Part: Defining definition_beta_CV(.) function
+#
+#####################*/
+
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::export]]
 Rcpp::List definition_beta_CV(const arma::mat X_train, const arma::mat Y_train, const arma::mat X_test,const arma::mat Y_test,
@@ -598,9 +785,9 @@ Rcpp::List definition_beta_CV(const arma::mat X_train, const arma::mat Y_train, 
                               arma::vec lambda_start, bool verbose)
 {
     linear_model LM(X_train, Y_train);
-    
-   // LM.set_B_zeros();
-    
+
+    // LM.set_B_zeros();
+
     arma::vec lambda_estimation  = lambda_start;
 
     Rcpp::List est_CV;
@@ -609,4 +796,7 @@ Rcpp::List definition_beta_CV(const arma::mat X_train, const arma::mat Y_train, 
                              lambda_estimation, verbose);
     return(est_CV);
 };
+
+//End
+
 

@@ -30,6 +30,7 @@ compute_pairwise_integrals <- function(matrix, T_grid)
         ))
     }
     )
+
     return(matrix_derivatives)
 }
 
