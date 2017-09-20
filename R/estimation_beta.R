@@ -69,6 +69,7 @@
 #' @useDynLib flm, .registration = TRUE
 #'
 
+
 estimation_beta <- function(X, Y, eigenval, NoI, thres,
                             number_non_zeros, ratio_lambda, # lambda,
                             number_lambda, proportion_training_set,
@@ -90,9 +91,25 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
     # estimation_norm_R is the function used to compute the norm of
     # beta. It is numerically solved with the NLOPTR optimization tool.
 
+
+############################################################################
+#
+# Part 1: defining the function for numerically estimate norm beta in K
+#
+############################################################################
+
     estimation_norm_R <- function(lambda, omega, B, tau)
     {
-        optimization_function <- function(x, lambda, omega, B, tau)
+
+    ## @A: the function we want to optimize in FLAME is:
+    ## 1=\sum_{j=1}^{\infty} \dfrac{tau_j < \beta_j , v_j >^2 }{ tau_j \norm{\beta_j}_K + \lambda omega_j}^2
+
+
+    ## @A: nloptr is a R package for nonlinear optimization.
+
+        ## ?@A: why do you optimiza 1-1/sum instead of 1-sum?
+
+             optimization_function <- function(x, lambda, omega, B, tau)
         {
             numerat <- B^2 * tau
             denom <- (tau * x + lambda * omega)^2
@@ -105,6 +122,20 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
         return(ott_model$solution)
 
     }
+
+############################################################################
+#
+# Part 2: RUN non-adaptive version to estimte weights for adaptive step
+#
+############################################################################
+
+
+
+#######################################################
+#
+# Part 2.1: estimation_first
+#
+#######################################################
 
     function_computation <- estimation_norm_R
 
@@ -129,7 +160,10 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
     lambda <- numeric()
 
     if (verbose) print('Non-adaptive step')
-    estimation_first <- definition_beta(X, Y, matrix(, 1, 0),
+
+    ## ?@A: what is the matrix(, 1, 0) for Beta here?
+
+     estimation_first <- definition_beta(X, Y, matrix(, 1, 0),
                                         eigenval, weights, NoI,
                                         function_computation, thres,
                                         number_non_zeros, lambda,
@@ -137,6 +171,12 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
                                         BIC = 0, verbose = FALSE)
 
     lambda_first <- estimation_first$Lambda_vect
+
+#######################################################
+#
+# Part 2.2: estimation_first_CV and finding lamda which implies minimum CV
+#
+#######################################################
 
     # Corss Valiation to identify the optimum value of lambda among
     # the set of the possible values previously
@@ -151,6 +191,8 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
     # fit the model (2), the remaining part to compute the prediction
     # error:left_out (1)
 
+
+    ## ?@A: there exists a set.seed for lable of training set!
     set.seed(16589)
     random_groups <- subset[sample(1:dim(X)[1])] # definition of the
     # training and test set
@@ -172,6 +214,12 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
     lambda_first_selected <- which.min(estimation_first_CV$error) # optimum
     # lambda. It minimizes the CV error
 
+#######################################################
+#
+# Part 2.3: estimation_first_definite, weights_new and
+#
+#######################################################
+
     if (verbose) { print(paste("Non adaptive step: final estimation with the optimum lambda")) }
 
    # if (estimation_first_CV$reached_last==1)
@@ -183,7 +231,13 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
    # if (estimation_first_CV$reached_last==0){
         # otherwise we compute again the estimation with
         # to the optimum value of lambda
-        estimation_first_definite <- definition_beta(X, Y,
+
+    ## @A: Since we import the lambda_start, we do not need to initialize the num_lambda and ratio_lambda, so we put them 0. It can be anything else.
+
+    ## @A: here still are weights are 1.
+
+    ## @A: we reduced the range of lambda from [lambda_max, lambda_min_by_CV]
+     estimation_first_definite <- definition_beta(X, Y,
                                                      matrix(, 1, 0), #estimation_first_CV$Beta, #,
                                                      eigenval, weights, NoI,
                                                      function_computation, thres,
@@ -201,6 +255,9 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
 
     # isolation of the significant predictors fitted by the Non-Adaptive step.
 
+
+    ## @A: estimation_first_definite$Pred is just the label of nonzero predictors
+
     if (length(estimation_first_definite$Pred)==0)
     {
         print('No significant predictors indentified.')
@@ -212,7 +269,9 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
     }else{
         if(length(estimation_first_definite$Pred)==1)
         {
-            beta_selected <- matrix(estimation_first_definite$Beta[,estimation_first_definite$Pred],
+
+            ## @A: the following matrices have just one columns because here length(estimation_first_definite$Pred)==1
+             beta_selected <- matrix(estimation_first_definite$Beta[,estimation_first_definite$Pred],
                                     length(estimation_first_definite$Beta[,estimation_first_definite$Pred]), 1)
             X2_data <- matrix(X[,estimation_first_definite$Pred], length(X[,estimation_first_definite$Pred]),1)
 
@@ -226,10 +285,29 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
         weights_new <- 1/norm_matrix_K(beta_selected, eigenval)
 
 
+        ## @A: For adaptive step, we just consider the non zero predictors and delete the zero ones.
+        ## you can see the length of weights_new can be less than the initial weights.
+
+############################################################################
+#
+# Part 3: RUN adaptive step
+#
+############################################################################
+
+
+#######################################################
+#
+# Part 3.1: estimation_second
+#
+#######################################################
+
         # the optimum value of lambda can be identified both with Cross-Validation
         # and BIC. (depending on the BIC_adaptive_step input parameter)
 
-        if (BIC_adaptive_step == TRUE) # BIC
+
+        ## @A: Here we changed X to X2_data. It's because we don't want to consider the zero predictors.
+
+         if (BIC_adaptive_step == TRUE) # BIC
         {
             estimation_second <- definition_beta(X2_data, Y, matrix(, 1, 0),
                                                  eigenval, weights_new, NoI,
@@ -251,7 +329,13 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
 
             lambda_second <- estimation_second$Lambda_vect
 
-            # Cross Validation procedure
+#######################################################
+#
+# Part 3.2: estimation_second_CV and finding lamda which implies minimum CV
+#
+#######################################################
+
+             # Cross Validation procedure
             if (verbose) print('Validation on the test set: identification of lambda')
 
             subset <- c(rep(2, ceiling(dim(X2_data)[1]*proportion_training_set)), rep(1, ceiling(dim(X2_data)[1]*(1-proportion_training_set)))) # 75% test set (2), 25% training:left_out (1)
@@ -294,7 +378,14 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
             #  if (estimation_second_CV$reached_last==0){
             # otherwise we compute again the estimation with the
             # optimum value of lambda
-            estimation_second_definite <- definition_beta(X2_data, Y,
+
+#######################################################
+#
+# Part 3.3:  estimation_second_definite and finding lamda which implies minimum CV
+#
+#######################################################
+
+             estimation_second_definite <- definition_beta(X2_data, Y,
                                                           matrix(, 1, 0), #estimation_second_CV$Beta,
                                                           eigenval, weights_new,
                                                           NoI, function_computation,
@@ -308,6 +399,12 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
 
         }
 
+#######################################################
+#
+# Part 3.3:  The output values
+#
+#######################################################
+
         predictors_2=estimation_second$Pred # final set of
         # predictors different from 0 (among the ones isolated in the
         # First: Non-Adaptive step)
@@ -316,17 +413,30 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
         # of the betas (with respect to the basis defined by the eigenvectors
         # of the kernel)
 
+
+        ## @A: Pay attention: predictors_2 are the labels of nonzro predictors among the
+        ## ones isolated in the First: Non-Adaptive step. So for finding the actual labels among the
+        ## whole predictors we need to define "predictor_def" as follows
+
         predictor_def <- estimation_first_definite$Pred[predictors_2] # index of
         # the non-zero predictors computed in the estimation
 
         beta_def <- matrix(0, dim(estimation_first_definite$Beta)[1],
                            dim(estimation_first_definite$Beta)[2])
+
+        ## @A: "beta_def" is a J*I matrix which the nonzero ones estimated by estimation_second and
+        ## rest of the columns are zero.
+
         beta_def[, predictor_def] <- beta_2 # final matrix of the estimated betas
         # (still as coefficients of the kernel basis)
 
         if (verbose) {print(paste("Total number of non zeros predictor estimated is ", length(predictors_2)))}
 
-        result <- list(beta=beta_def,
+
+        ## ?@A: Isn't it better we return b2_selected and X2_data instead of
+        ##      estimation_first_definite$Beta and estimation_first_definite$Pred respectively?
+
+          result <- list(beta=beta_def,
                        beta_no_adaptive=estimation_first_definite$Beta,
                        predictors=predictor_def,
                        predictors_no_adaptive=estimation_first_definite$Pred)
@@ -334,3 +444,5 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
     }
 
 }
+
+## End
