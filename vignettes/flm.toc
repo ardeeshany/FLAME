@@ -1,0 +1,10 @@
+\contentsline {section}{\numberline {1}Introduction}{1}{section.1}
+\contentsline {section}{\numberline {2}Defintion of the kernel }{2}{section.2}
+\contentsline {subsection}{\numberline {2.1}Exponential, Sobolev and Gaussian kernel }{2}{subsection.2.1}
+\contentsline {subsection}{\numberline {2.2}Periodic kernel }{4}{subsection.2.2}
+\contentsline {section}{\numberline {3}FLAME estimation }{5}{section.3}
+\contentsline {subsection}{\numberline {3.1}Generation of data }{6}{subsection.3.1}
+\contentsline {subsection}{\numberline {3.2}Defintion of the kernel and projection }{7}{subsection.3.2}
+\contentsline {subsection}{\numberline {3.3}FLAME estimation }{8}{subsection.3.3}
+\contentsline {subsection}{\numberline {3.4}Analysis of the results }{10}{subsection.3.4}
+\contentsline {section}{\numberline {4}The automatical usage of the FLAME method to solve Function-on-Scalar regression problems }{12}{section.4}

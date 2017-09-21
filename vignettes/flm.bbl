@@ -1,0 +1,28 @@
+\begin{thebibliography}{3}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Berlinet and Thomas-Agnan(2011)]{berlinet:thomas:2011}
+A.~Berlinet and C.~Thomas-Agnan.
+\newblock \emph{Reproducing kernel Hilbert spaces in probability and
+  statistics}.
+\newblock Springer Science and Business Media, 2011.
+
+\bibitem[Dunford and Schwartz(1963)]{dunford:1963}
+N.~Dunford and J.~Schwartz.
+\newblock \emph{Linear operators. Part 2: Spectral theory. Self adjoint
+  operators in Hilbert space}.
+\newblock Interscience Publishers, 1963.
+
+\bibitem[Karatzoglou et~al.(2004)Karatzoglou, Smola, Hornik, and
+  Zeileis]{kernlab}
+Alexandros Karatzoglou, Alex Smola, Kurt Hornik, and Achim Zeileis.
+\newblock kernlab: an s4 package for kernel methods in r.
+\newblock \emph{Journal of Statistical Software}, 11\penalty0 (9):\penalty0
+  1--20, 2004.
+\newblock URL \url{http://www.jstatsoft.org/v11/i09/}.
+
+\end{thebibliography}
