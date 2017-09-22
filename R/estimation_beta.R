@@ -69,15 +69,15 @@
 #' @useDynLib flm, .registration = TRUE
 #'
 
-
-estimation_beta <- function(X, Y, eigenval, NoI, thres,
-                            number_non_zeros, ratio_lambda, # lambda,
-                            number_lambda, proportion_training_set,
-                            verbose = FALSE)
+estimation_beta <- function(X, Y, eigenval,
+                 NoI, thres, number_non_zeros, ## @A: These three variables are stopping criteria
+                 ratio_lambda, # lambda,
+                 number_lambda, proportion_training_set,
+                 verbose = FALSE)
 {
 #
     # @param BIC_adaptive_step bool. if \code{TRUE} the \eqn{\lambda} paramter
-    # of the adaptive step is choosen with the Bayesian Index Criteria; othewise
+    # of the adaptive step is choosen with the Bayesian Index Criteria (BIC); othewise
     # Cross-Validation is used.
     BIC_adaptive_step = FALSE
     # @param lambda scalar. value of \eqn{\lambda}.
@@ -97,6 +97,7 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
 # Part 1: Defining the function for numerically estimate norm beta in K
 #
 ############################################################################
+### %% Need to modify for AFSSEN
 
     estimation_norm_R <- function(lambda, omega, B, tau)
     {
@@ -105,9 +106,9 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
     ## 1=\sum_{j=1}^{\infty} \dfrac{tau_j < \beta_j , v_j >^2 }{ tau_j \norm{\beta_j}_K + \lambda omega_j}^2
 
 
-    ## @A: nloptr is a R package for nonlinear optimization.
+    ## @A: nloptr is an R package for nonlinear optimization.
 
-        ## ?@A: why do you optimiza 1-1/sum instead of 1-sum?
+        ## ?@A: why do you optimiza |1-1/sum| instead of |1-sum|?
 
              optimization_function <- function(x, lambda, omega, B, tau)
         {
@@ -116,7 +117,12 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
             tot <- 1 - 1 / (sum(numerat/denom))
             return(abs(tot))
         }
+
+        ## ?@A: Are these initial values are fixed or we need to change them in different situation?
         opts= list("algorithm"= "NLOPT_LN_COBYLA", "xtol_rel"=1.0e-16)
+
+
+        ## ?@A: why it ended up with semicolon (;)?
         ott_model <- nloptr(0, optimization_function, opts=opts, lb=0, omega=omega,lambda=lambda, B=B, tau=tau);
 
         return(ott_model$solution)
@@ -163,6 +169,8 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
 
     ## ?@A: what is the matrix(, 1, 0) for Beta here?
 
+    ## @A: we can import the vector of lambda in "lambda" or same as here put it numeric() (means nothing)
+    ## and ask the definition_beta function generate the log equispaced lambda function with initializing ratio_lambda and number_lambda.
      estimation_first <- definition_beta(X, Y, matrix(, 1, 0),
                                         eigenval, weights, NoI,
                                         function_computation, thres,
@@ -170,7 +178,11 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
                                         ratio_lambda, num_lambda_NONad,
                                         BIC = 0, verbose = FALSE)
 
-    lambda_first <- estimation_first$Lambda_vect
+
+     ## @A: estimation_first$Lambda_vect is a vector {lambda_max,....,lambda*} the lambdas were run in definition_beta.
+     ## lambda* can be lambda_min or some lambda larger than it.
+
+     lambda_first <- estimation_first$Lambda_vect
 
 #######################################################
 #
@@ -193,8 +205,10 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
 
 
     ## ?@A: there exists a set.seed for lable of training set!
+
     set.seed(16589)
     random_groups <- subset[sample(1:dim(X)[1])] # definition of the
+
     # training and test set
 
     i <- 1
@@ -211,6 +225,9 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
                                               lambda_first, verbose = FALSE)
 
    # print(estimation_first_CV$error)
+
+    ## @A: estimation_first_CV$error is the \norm{Y_pred - Y_test}_H for different lambda.
+    ## @A: lambda_first_selected is not the optimum lambda. It is the index of the lambda.
     lambda_first_selected <- which.min(estimation_first_CV$error) # optimum
     # lambda. It minimizes the CV error
 
@@ -232,12 +249,22 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
         # otherwise we compute again the estimation with
         # to the optimum value of lambda
 
-    ## @A: Since we import the lambda_start, we do not need to initialize the num_lambda and ratio_lambda, so we put them 0. It can be anything else.
+    ## @A: Since lambda_first=estimation_first$Lambda_vect, is a vector {lambda_max,....,lambda*} the lambdas were run in definition beta.
+    ## So we import the lambda_start, we do not need to initialize the num_lambda and ratio_lambda, so we put them 0. It can be anything else.
 
-    ## @A: here still are weights are 1.
+    ## @A: here the weights are still 1.
 
     ## @A: we reduced the range of lambda from [lambda_max, lambda_min_by_CV]
-     estimation_first_definite <- definition_beta(X, Y,
+
+
+
+    ## ?@A: In part 2.1 we calculated definition_beta for lambda={\lambda_max,....,\lambda_min}. In
+    ## part 2.2 we find the lambda_first_selected  which is the label of tha lambda gives the min C.V.
+    ## But again here calculate definition_beta for lambda={\lambda_max , ... , \lambda_{lambda_first_selected}} which
+    ## the result should be a subset of results of part 2.1. Don't you think that? It does not
+    ## affect on final result but makes the code slower.
+
+        estimation_first_definite <- definition_beta(X, Y,
                                                      matrix(, 1, 0), #estimation_first_CV$Beta, #,
                                                      eigenval, weights, NoI,
                                                      function_computation, thres,
@@ -270,7 +297,7 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
         if(length(estimation_first_definite$Pred)==1)
         {
 
-            ## @A: the following matrices have just one columns because here length(estimation_first_definite$Pred)==1
+            ## @A: In the following matrices, we have just one column because the length(estimation_first_definite$Pred)==1
              beta_selected <- matrix(estimation_first_definite$Beta[,estimation_first_definite$Pred],
                                     length(estimation_first_definite$Beta[,estimation_first_definite$Pred]), 1)
             X2_data <- matrix(X[,estimation_first_definite$Pred], length(X[,estimation_first_definite$Pred]),1)
@@ -354,6 +381,7 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
 
             #print(estimation_second_CV$error)
 
+            ## @A: lambda_second_selected is the index of the lambda which implies the min C.V.
             lambda_second_selected <- which.min(estimation_second_CV$error)
 
             if (lambda_second_selected == lambda_second[length(lambda_second)])
@@ -385,7 +413,13 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
 #
 #######################################################
 
-             estimation_second_definite <- definition_beta(X2_data, Y,
+            ## ?@A: Same as part 2.3 I have the problem here.
+            ## In part 3.1 we calculated definition_beta for lambda={\lambda_max,....,\lambda_min}. In
+            ## part 3.2 we find the lambda_second_selected  which is the label of tha lambda gives the min C.V.
+            ## But again here we are gonna calculate the definition_beta for lambda={\lambda_max , ... , \lambda_{lambda_first_selected}} which
+            ## the result should be a subset of results of part 3.1. Don't you think that? It does not affect on final result but does not change anything.
+
+              estimation_second_definite <- definition_beta(X2_data, Y,
                                                           matrix(, 1, 0), #estimation_second_CV$Beta,
                                                           eigenval, weights_new,
                                                           NoI, function_computation,
@@ -431,10 +465,6 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
         # (still as coefficients of the kernel basis)
 
         if (verbose) {print(paste("Total number of non zeros predictor estimated is ", length(predictors_2)))}
-
-
-        ## ?@A: Isn't it better we return b2_selected and X2_data instead of
-        ##      estimation_first_definite$Beta and estimation_first_definite$Pred respectively?
 
           result <- list(beta=beta_def,
                        beta_no_adaptive=estimation_first_definite$Beta,

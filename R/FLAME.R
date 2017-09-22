@@ -86,6 +86,12 @@
 #' names(FLAME_estimation)
 #' }
 #'
+
+
+## @A: The main core of FLAME is estimation_beta function. FLAME just change the style of variables to
+## what are suitable for estimation_beta. Then just use it and then reform the output style based on
+## what is desired for FLAME.
+
 FLAME <- function(Y, X, type_kernel = 'sobolev', param_kernel = 8,
                   thres_eigen = 0.99, period_kernel = NULL,
                   NoI = 10, thres_CD = 0.01,
@@ -93,20 +99,24 @@ FLAME <- function(Y, X, type_kernel = 'sobolev', param_kernel = 8,
                   number_lambda = 100, proportion_training_set = 0.75,
                   verbose = FALSE)
 {
-    # the function allows the user to pass as a Y a fd object or a list
+    # the function allows the user to pass Y as a fd object or a list
     # containing the time domain (time_grid) and the punctual evaluation
     # of data (as a matrix)
 
-#####################
+#######################################################################
 #
-# @A: Part 1: defining Y_full and T_domain
+# @A: Part 1: defining Y_full and T_domain (Depends Y is fd object or list)
 #
-#####################
+#######################################################################
 
   if (class(Y) =='fd')
     ## @A: in fd object, basis$params returns the knots of the basis
-    ## @A: eval.fd: evaluate fd object at some values. Lfdobj: can apply a linear diff operator on the fd object
+    ## @A: eval.fd: evaluate fd object at some values.
+    ## Lfdobj: can apply a linear diff operator on the fd object
        {
+
+
+     ## ?@A: Does Y$basis$params give the interior points (knots) of the domain?
         T_domain = sort(c(Y$basis$rangeval, Y$basis$params))
         Y_full <- t(eval.fd(T_domain, Y, Lfdobj=0, returnMatrix=TRUE))
     }else
@@ -117,9 +127,8 @@ FLAME <- function(Y, X, type_kernel = 'sobolev', param_kernel = 8,
         {
             T_domain <- Y$time_domain
             Y_full <- Y$data
-    ### ?@A: Want to chech Y_full is N*m....but I think it is not coorect.
 
-
+    ## ?@A: Here we want to check if the Y_full is N*m....but I think it is not correct.
              if (dim(Y_full)[2] != length(T_domain))
             {
                 if (dim(Y_full)[1] != length(T_domain))
@@ -136,14 +145,15 @@ FLAME <- function(Y, X, type_kernel = 'sobolev', param_kernel = 8,
 
     }
 
-#####################
+#######################################################################
 #
 # @A: Part 2: Finding eigenval, eigenvect and derivatives of kernel
 #
-#####################
+#######################################################################
 
     ### ?@A: e.g. T_domain=1,2,3,4,5 then M_integ=5/4 but it would be {length(T_domain)-1}/diff(range(T_domain))
-    M_integ <- length(T_domain)/diff(range(T_domain))
+
+     M_integ <- length(T_domain)/diff(range(T_domain))
 
     if (type_kernel == 'periodic')
     {
@@ -178,22 +188,20 @@ FLAME <- function(Y, X, type_kernel = 'sobolev', param_kernel = 8,
 
     # project on the kernel basis
 
-
-#####################
+#######################################################################
 #
 # @A Part3: Checking some intial conditions / verbose is here.
 #
-#####################
-
+#######################################################################
 
     ## @A: projection_basis project each function Y_n on eigenvect of the kernel as basis functions.
     ## It finds the coefficients of Y_n on each eigenvect of kernel.
-    ## Indeed, the output is a J*N matrix which each column is the coeeficients of eigenvec of
-    ## the projection each function in Y.
+    ## Indeed, the output is a J*N matrix which each column is the coefficients of eigenvec of
+    ## the projection each function of Y.
 
       Y_matrix <- projection_basis(Y_full, eigenvect, M_integ)
     # and run the estimation
-    # check dimenstions
+    # check dimentions
     if (dim(X)[1] != dim(Y_matrix)[2])
     {
 
@@ -210,13 +218,11 @@ FLAME <- function(Y, X, type_kernel = 'sobolev', param_kernel = 8,
         number_non_zeros = dim(X)[2]
     }
 
-
-#####################
+#######################################################################
 #
 # @A Part4: estimating the FLAME coefficients with using estimation_beta(.) function.
 #
-#####################
-
+#######################################################################
 
        FLAME_est <- estimation_beta(X = X, # design matrix
                              Y = Y_matrix, # response functions projected on the kernel basis
@@ -229,20 +235,17 @@ FLAME <- function(Y, X, type_kernel = 'sobolev', param_kernel = 8,
                              proportion_training_set = proportion_training_set, # training set
                              verbose = FALSE) # no show of all the iterations
 
-     ## @A: projection_domain(.) is a N*m matrix.compute the pointwise evaluation of a function
-     ## (or a set of functions) on the time domain,
+     ## @A: projection_domain(.) is a N*m matrix.compute the pointwise evaluation of a coefficient of function
+     ## on the time domain,
      ## FLAME_est$beta is a J*I matrix final estimated coefficients in the kernel basis
      ## FLAME_est$beta[,i]=(c_i1,...,c_iJ) where beta_i=c_i1v_1+...+c_iJv_J but
      ## projection_domain(FLAME_est$beta, eigenvect)[n,i]=c_i1v_1(x_n)+...+c_iJv_J(x_n)
 
-
-
-#####################
+#######################################################################
 #
 # @A Part5: Preparing the beta as output which is going to be fd or matrix.
 #
-#####################
-
+#######################################################################
 
            beta_on_time_grid <- projection_domain(FLAME_est$beta, eigenvect)
 
