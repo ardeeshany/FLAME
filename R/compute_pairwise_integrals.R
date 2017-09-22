@@ -17,6 +17,8 @@
 #' T_domain <- seq(0, 1, length = 50)
 #' pairwise_derivartives <- compute_pairwise_integrals(derivatives, T_domain)
 #'
+
+## ?@A: Because of T_grid[2]-T_grid[1] as M_integ, It works just for equispace T_grid, isn't it?
 compute_pairwise_integrals <- function(matrix, T_grid)
 {
     matrix_derivatives <- apply(matrix, 2, function(y)

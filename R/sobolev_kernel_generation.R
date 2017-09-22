@@ -37,9 +37,21 @@
 #'                sigma = 1, plot.eigen = FALSE)
 #'
 
+
+## @A: sobolev_kernel_generation generates the eigenvalues and eigenvectors of the Sigma matrix not the sobolev kernel.
+## sobolev kernel has the same eigenvectors but its elgenval is sobolev_kernel_generation$values/m
+## more detail: when we want to find the eigenval/eigenvec of a kernel function, say K(t,s)
+## we should find a \lambda and v such that \int{ K(t,s) v(s) ds} = \lambda v(t)
+## numerically we can write the integral as \sum{j=1}^m K(t,s_j)v(s_j)*1/M = \lambda v(t) for any t
+## or even by matrix [K(t_i_s_j)][v(s_1),...,v(s_m)]*1/m=\lambda [v(t_1),...,v(t_m)]
+## Since by linear algebra we can find the eigenval/eigenvec of the matrix [K(t_i_s_j)], called \lambda_new and v_new
+## we can see v=v_new but \lambda=\lambda_new*1/m
+
 sobolev_kernel_generation <- function( a, b, m,
                            sigma, plot.eigen = FALSE )
 {
+
+    ## ?@A: shouldn't it be return(sigma * cosh(sigma*(b-s))*cosh(sigma*(t-a))/sinh(sigma*(sigma)))?
 
         K1<-function(t,s){
             if(t < s)
@@ -48,6 +60,10 @@ sobolev_kernel_generation <- function( a, b, m,
                 return(sigma * cosh(sigma*(b-t))*cosh(sigma*(s-a))/sinh(sigma*(b-a)))
         }
 
+
+
+
+       ## @A: pts is the grid on t and s
         pts<-seq(0,1,length=m)
         Sigma<-matrix(nrow=m,ncol=m)
         for(i in 1:m){

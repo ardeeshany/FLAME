@@ -50,6 +50,8 @@
 generation_kernel_periodic <- function(period = NULL, parameter = NULL, domain, thres = 0.99,
                               return.derivatives = FALSE)
 {
+
+    ## ?@A: Shouldn't it be M_integ <- (length(domain)-1)/diff(range(domain))?
     M_integ <- length(domain)/diff(range(domain))
 
     if (length(period) != 1 )
@@ -69,20 +71,40 @@ generation_kernel_periodic <- function(period = NULL, parameter = NULL, domain, 
         sigma^2* exp(- (2*sin(pi*abs(x-y)/(p))^2)/(sigma))
     }
 
+    ## @A: difference between apply, lapply and sapply:
+    ## apply  - When you want to apply a function to the rows or columns of a matrix
+    ## lapply - When you want to apply a function to each element of a list in turn and get a list back.
+    ## sapply - When you want to apply a function to each element of a list in turn, but you want a vector back, rather than a list.
+
     generate_matrix <- function(domain, sigma, p){
+    ## @A: it means we apply the function(x) on each element of "domain" but the output is a vector.
         sapply(domain, function(x){
             sapply(domain, function(y) {dist_periodic(x,y, sigma,p)})
         })
     }
 
 
+   ## @A: the following is another way to define generate_matrix but takes more time
+   ## generate_matrix=function(domain,sigma,p){
+   #      G2=matrix(NA,length(domain),length(domain))
+   #          for(i in 1:length(domain)){
+   #          for(j in 1:length(domain)){
+   #            G2[i,j]=  dist_periodic(domain[i],domain[j], sigma,p)
+   #          }
+   #      }
+   # return(G2)
+   #       }
+
+
     kernel_matrix <- generate_matrix(domain, sigma = parameter, p = period)
 
     kernel_def <- eigen(kernel_matrix)
+
+    ## ?@A: Again, shouldn't it be kernel_def$vectors <- kernel_def$vectors
     kernel_def$values <- kernel_def$values/M_integ
     kernel_def$vectors <- kernel_def$vectors*sqrt(M_integ)
 
-    # isoate the number of significant eigenvalues
+    # isolate the number of significant eigenvalues
     num_eigen <- which((cumsum(kernel_def$values)/sum(kernel_def$values))>thres)[1]
     eigen_chosen <- 1:num_eigen
 

@@ -31,6 +31,9 @@
 #' projection_basis(Y_full, eigenvect, M_integ ) # projection on the J dimensional
 #' # basis of the Y functions.
 
+
+## ?@A: Again in definition, we should have Number of points of the domain D of the functions (m) "minus one" divided by the width of the domain |D|.
+
 projection_basis <- function(y, eigenvect, M_integ)
 {
     N <- dim(y)[1]

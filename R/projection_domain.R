@@ -21,6 +21,10 @@
 #' projection_domain(Y_matrix, eigenvect) # projection of the data
 #' # on the time domain seq(0, 1, length = 50)
 #'
+
+## @A: Here we do not know what the domain D is, but eigenfun is containing the pointwise evaluation
+## of the eigenfunctions of kernel and it is enough.
+
 projection_domain <- function(y, eigenfun)
 {
     y_mat <- eigenfun %*% y

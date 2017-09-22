@@ -22,6 +22,10 @@
 #' pairwise_derivartives <- compute_pairwise_integrals(derivatives, T_domain)
 #' sum(norm_matrix_H_derivatives(t(Y_matrix), pairwise_derivartives))
 
+
+## ?@A: Shouldn't the M be a N*J matrix? (not J*N)
+## ?@A: Isn't the basis functions orthogonal to each other? Whouldn't the pairwise_derivatives an identity matrix?
+## ?@A: what formula did you use for the Computation of the H-norm of the derivatives of a set of functions?
 norm_matrix_H_derivatives <- function(M, pairwise_derivatives)
 {
     if (is.null(dim(M)))

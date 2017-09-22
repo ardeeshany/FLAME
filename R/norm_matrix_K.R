@@ -18,6 +18,10 @@
 #' data(simulation)
 #' norm_K = sum(norm_matrix_K(Y_matrix, eigenval))
 #'
+
+## @A: For each column, it does not give the norm K of the column! It actually compute the norm K of
+## the function whose projection on basis is the column.
+
 norm_matrix_K <- function(M, eigenval)
 {
     if (is.null(dim(M)))

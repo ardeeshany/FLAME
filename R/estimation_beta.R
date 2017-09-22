@@ -94,7 +94,7 @@ estimation_beta <- function(X, Y, eigenval, NoI, thres,
 
 ############################################################################
 #
-# Part 1: defining the function for numerically estimate norm beta in K
+# Part 1: Defining the function for numerically estimate norm beta in K
 #
 ############################################################################
 

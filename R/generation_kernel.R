@@ -79,6 +79,9 @@
 generation_kernel <- function(type = 'sobolev', parameter = NULL, domain, thres = 0.99,
                               return.derivatives = FALSE)
 {
+
+    ## ?@A: shouldn't it be M_integ <- (length(domain)-1)/diff(range(domain))?
+
     M_integ <- length(domain)/diff(range(domain))
 
     if (!(type %in% c('sobolev', 'exponential', 'gaussian')))
@@ -99,25 +102,43 @@ generation_kernel <- function(type = 'sobolev', parameter = NULL, domain, thres 
         kernel_def <- sobolev_kernel_generation(a = domain[1], b = domain[length(domain)],
                                      m = length(domain), sigma = parameter,
                                      plot.eigen = FALSE)
+
+    ## @A:when we want to find the eigenval/eigenvec of a kernel function, say K(t,s)
+    ## we should find a \lambda and v such that \int{ K(t,s) v(s) ds} = \lambda v(t)
+    ## numerically we can write the integral as \sum{j=1}^m K(t,s_j)v(s_j)*1/M = \lambda v(t) for any t
+    ## or even by matrix [K(t_i_s_j)][v(s_1),...,v(s_m)]*1/m=\lambda [v(t_1),...,v(t_m)]
+    ## Since by linear algebra we can find the eigenval/eigenvec of the matrix [K(t_i_s_j)], called \lambda_new and v_new
+    ## we can see v=v_new but \lambda=\lambda_new*1/m
+
+    ## ?@A: Shouln't it be kernel_def$vectors <- kernel_def$vectors
         kernel_def$values <- kernel_def$values/M_integ
         kernel_def$vectors <- kernel_def$vectors*sqrt(M_integ)
     }
     if (type == 'exponential')
     {
+
+    ## @A: in "kernlab" package, the "laplacedot" makes the exponential kernel function
         rbfkernel <- laplacedot(sigma = parameter)
         mat <- kernelMatrix(rbfkernel, domain)
+
+        ## ?@A: Shouln't it be vectors = eigen(mat)$vectors?
         kernel_def <- list(vectors = eigen(mat)$vectors*sqrt(M_integ),
                            values = eigen(mat)$values/M_integ)
     }
     if (type == 'gaussian')
     {
+
+    ## @A: in "kernlab" package, the "rbfdot" makes the gaussian kernel function
+
         rbfkernel <- rbfdot(sigma = parameter)
         mat <- kernelMatrix(rbfkernel, domain)
-        kernel_def <- list(vectors = eigen(mat)$vectors*sqrt(M_integ),
+
+        ## ?@A: Shouln't it be vectors = eigen(mat)$vectors?
+         kernel_def <- list(vectors = eigen(mat)$vectors*sqrt(M_integ),
                            values = eigen(mat)$values/M_integ)
     }
 
-    # isoate the number of significant eigenvalues
+    # isolate the number of significant eigenvalues
     num_eigen <- which((cumsum(kernel_def$values)/sum(kernel_def$values))>thres)[1]
     eigen_chosen <- 1:num_eigen
 
@@ -128,7 +149,14 @@ generation_kernel <- function(type = 'sobolev', parameter = NULL, domain, thres 
 
     if (return.derivatives == TRUE)
     {
-        diff_autovett <- apply(autovett, 2, diff)/(domain[2]-domain[1])
+
+
+
+    ## @A: since v'(x)=(v(x+h)-v(x))/h so we take each column and make v' for it.
+    ## It is obvious when we have m points for each v, we will have m-1 points for each v'
+
+    ## ?@A: Shouldn't it be diff_autovett <- apply(autovett, 2, diff)/(M_integ)?
+       diff_autovett <- apply(autovett, 2, diff)/(domain[2]-domain[1])
         return(list(eigenvect = autovett, eigenval = autoval,
                     derivatives = diff_autovett))
     }else{
